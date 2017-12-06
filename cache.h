@@ -1,21 +1,23 @@
-#include <iostream>
+include <iostream>
 #include <exception>
 #include <cmath>
+
 typedef {
   RANDOM = 0,
     LRU = 1,
 } EVICTION;
 
-
+//class that is one entry in the cache including metadata
 class cacheEntry{
 private:
-  int LRUstanding; //least recentry used = 0
+  int LRUstanding; //most recentry used = 0, least recently used = set_size - 1
   int valid;
   char* data;
   int tag;
   int block_size;
 
 public:
+  // prob wont be used.
   cacheEntry(int block_size, int LRUstanding, int valid){
     LRUstanding = LRUstanding;
     valid = valid;
@@ -24,6 +26,7 @@ public:
     block_size = block_size;
   }
 
+  //make a new cache entry of size block_size that is empty
   cacheEntry(int block_size){
     LRUstanding = -1;
     valid = -1;
@@ -35,46 +38,63 @@ public:
     delete data;
   }
 
+  //get word from entry at a certian offset
   char getWord(int offset){
     return *(data + offset);
   }
 
+  //get the LRU standing of the block
   int getLRU(){
     return LRUstanding;
   }
 
+  //get the tag of the block
   int getTag(){
     return tag;
   }
 
+  //get the valid of the block
   int getValid(){
     return valid;
   }
 
+  //update all of the data of a certian entry, meant to be used for brining whole blocks from the memory to the cache
   void updateEntryData(char* new_data){
     for(int i = 0; i < block_size; i++){
       *(data + i) = *(new_data + i);
     }
   }
 
+  // update the word at a certian offset in the entry, meant to be used for write hits in the cache.
+  void updateEntryData(int offset, char new_data){
+    *(data + index) = new_data;
+  }
+
+  //updates the valid bit of a block
   void updateValid(int new_valid){
     valid = new_valid;
   }
 
+  //updates the LRU standing of the block
   void updateEntryLRU(int new_LRU){
     LRUstanding = new_LRU;
   }
 
 };
 
+
+//this class is a set of cacheEntries in the cache
 class set{
 private:
   int blocks_per_set;
   cacheEntry** data;
+  EVICTION policy;
 
 public:
-  set(int blocks_per_set, int block_size){
+  //creats a new set with a specific amount of blocks of a specific size.
+  set(int blocks_per_set, int block_size, EVICTION evic){
     num_of_blocks = num_of_blocks;
+    policy = evic;
     data = new cacheEntry*[num_of_blocks];
     for ( int i = 0; i < blocks_per_set; i++){
       cacheEntry* temp = new cacheEntry(block_size);
@@ -89,6 +109,7 @@ public:
     delete data;
   }
 
+  // find a valid entry with this tag in the set, if none exists - returns NULL
   cacheEntry* findEntryTag(int tag){
     for(int i = 0; i < blocks_per_set; i++){
       if(*(data + i)->getTag() == tag && *(data + i)->getValid() == 1){
@@ -97,7 +118,7 @@ public:
     }
     return NULL;
   }
-
+  // updates the LRU standing inside the block so that the entry with this tag is the most recently used.
   void updateLRU(int tag){
     int prev_LRU;
     for(int i = 0; i < blocks_per_set; i++){
@@ -118,22 +139,32 @@ public:
     }
   }
 
-  int findEvic(){
+  // finds the block that should be evicted inside the set, the one that is least recently used = LRUstanding == blocks_per_set - 1
+  int findEvicLRU(){
     for(int i = 0; i < blocks_per_set; i++){
-      if(*(data + i)->getLRU == 0){
+      if(*(data + i)->getLRU == blocks_per_set - 1){
         return i;
       }
     }
   }
 
+  int findEvicRandom(){
+    return 1; // FIXME how to randomize this??
+  }
+
   void updateBlock(char* new_data){
-    int i = findEvic();
+    int i;
+    if(policy == LRU){
+      i = findEvicLRU();
+    }
+    else{
+      i = findEvicRandom();
+    }
     cacheEntry* entry = *(data + i);
     entry->updateEntryData(new_data);
     entry->updateValid(1);
   }
 
-  
 };
 
 
@@ -141,8 +172,8 @@ class Cache{
 private:
   int num_of_blocks;
   int blocks_per_set;
-  int block_size;
-  int cache_size;
+  int block_size; //in bytes(=chars)
+  int cache_size; //in bytes(=chars)
   int num_of_sets; //associativity
   set** data;
   EVICTION policy;
@@ -156,6 +187,7 @@ private:
 
 public:
 
+  // create a new cache
   Cache(int cache_size, int block_size, int associativity, int evic){
     cache_size = cache_size;
     block_size = block_size;
@@ -171,7 +203,7 @@ public:
 
     data = new set*[num_of_sets];
     for (int i = 0; i < num_of_sets; i++){
-      set temp = new set(blocks_per_set, block_size);
+      set temp = new set(blocks_per_set, block_size, policy);
       *(data + i) = temp;
     }
 
@@ -189,11 +221,13 @@ public:
     delete data;
   }
 
+  // should be invoked when servicing a load word command. Will update laod hit\miss stats as well as update the cache if it is a miss returns a single char that is the answer to the load request.
   char loadWord(int address, Memory mem){
     int bits_index_and_offset = log(block_size) + log(associativity);
     int index = address % (pow(2, bits_index_and_offset));
+    index = index / block_size;
     int offset = address % block_size;
-    int tag ; //FIXME
+    int tag = address / (pow(2, bits_index_and_offset));
 
 
     set current = *(data + index);
