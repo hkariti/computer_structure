@@ -1,11 +1,62 @@
-include <iostream>
+#include <iostream>
 #include <exception>
 #include <cmath>
+#include <time.h>
+#include <cstdlib>
 
-typedef {
+
+typedef enum{
   RANDOM = 0,
     LRU = 1,
 } EVICTION;
+
+class Memory{
+private:
+  int memorySize;
+  int block_size;
+  char* data;
+
+  char randomChar(){
+    srand(time(NULL));
+    int i = rand() % ('z' - 'a');
+    if( 'a' + i < 'a' || 'a' + i > 'z'){
+      throw randomExecption();
+    }
+    return 'a' + i;
+  }
+
+public:
+  class randomExecption : std::exception {};
+
+  Memory(int size, int start_val, int block_size){
+    memorySize = size;
+    block_size = block_size;
+    data = new char[memorySize];
+    for(int i = 0; i < memorySize; i++){
+      if(start_val == 0){
+        *(data + i) = 0xff;
+      }
+      else{
+        *(data + i) = randomChar();
+      }
+    }
+  }
+
+  char* getBlock(int address){
+    char* new_block = new char[block_size];
+    int offset = address % block_size;
+    for(int i = 0; i < block_size; i++){
+      *(new_block + i) = *(data + address - offset + i);
+    }
+    return new_block;
+  }
+
+  void replaceWord(int address, char new_word){
+    *(data + address) = new_word;
+  }
+};
+
+
 
 //class that is one entry in the cache including metadata
 class cacheEntry{
@@ -67,7 +118,7 @@ public:
 
   // update the word at a certian offset in the entry, meant to be used for write hits in the cache.
   void updateEntryData(int offset, char new_data){
-    *(data + index) = new_data;
+    *(data + offset) = new_data;
   }
 
   //updates the valid bit of a block
@@ -91,11 +142,14 @@ private:
   EVICTION policy;
 
 public:
+
+
+  class randomExecption : std::exception {};
   //creats a new set with a specific amount of blocks of a specific size.
   set(int blocks_per_set, int block_size, EVICTION evic){
-    num_of_blocks = num_of_blocks;
+    blocks_per_set = blocks_per_set;
     policy = evic;
-    data = new cacheEntry*[num_of_blocks];
+    data = new cacheEntry*[blocks_per_set];
     for ( int i = 0; i < blocks_per_set; i++){
       cacheEntry* temp = new cacheEntry(block_size);
       *(data + i) = temp;
@@ -103,7 +157,7 @@ public:
   }
 
   ~set(){
-    for( int i = 0; i < block_size; i++){
+    for( int i = 0; i < blocks_per_set; i++){
       delete *(data + i);
     }
     delete data;
@@ -112,7 +166,7 @@ public:
   // find a valid entry with this tag in the set, if none exists - returns NULL
   cacheEntry* findEntryTag(int tag){
     for(int i = 0; i < blocks_per_set; i++){
-      if(*(data + i)->getTag() == tag && *(data + i)->getValid() == 1){
+      if((*(data + i))->getTag() == tag && (*(data + i))->getValid() == 1){
         return *(data + i);
       }
     }
@@ -122,18 +176,18 @@ public:
   void updateLRU(int tag){
     int prev_LRU;
     for(int i = 0; i < blocks_per_set; i++){
-      if(*(data + i)->getTag() == tag){
-        prev_LRU = *(data + i)->getLRU();
+      if((*(data + i))->getTag() == tag){
+        prev_LRU = (*(data + i))->getLRU();
       }
     }
     for( int i = 0; i < blocks_per_set; i++){
-      if(*(data + i)->getLRU() <= prev_LRU){
-        int temp = *(data + i)->getLRU();
+      if((*(data + i))->getLRU() <= prev_LRU){
+        int temp = (*(data + i))->getLRU();
         if(temp == prev_LRU){
-          *(data + i)->updateLRU(0);
+          (*(data + i))->updateEntryLRU(0);
         }
         else{
-          *(data + i)->updateLRU(temp + 1);
+          (*(data + i))->updateEntryLRU(temp + 1);
         }
       }
     }
@@ -142,14 +196,19 @@ public:
   // finds the block that should be evicted inside the set, the one that is least recently used = LRUstanding == blocks_per_set - 1
   int findEvicLRU(){
     for(int i = 0; i < blocks_per_set; i++){
-      if(*(data + i)->getLRU == blocks_per_set - 1){
+      if((*(data + i))->getLRU() == (blocks_per_set-1)){
         return i;
       }
     }
   }
 
   int findEvicRandom(){
-    return 1; // FIXME how to randomize this??
+    std::srand(time(NULL));
+    int i = std::rand() % (blocks_per_set - 1);
+    if( i < 0 || i >= blocks_per_set){
+      throw randomExecption();
+    }
+    return i; // FIXME how to randomize this??
   }
 
   void updateBlock(char* new_data){
@@ -169,7 +228,7 @@ public:
 
 
 class Cache{
-private:
+public:
   int num_of_blocks;
   int blocks_per_set;
   int block_size; //in bytes(=chars)
@@ -183,7 +242,7 @@ private:
   int load_misses;
   int store_hits;
   int store_misses;
-  int instruction_count;
+  //int instruction_count;
 
 public:
 
@@ -203,7 +262,7 @@ public:
 
     data = new set*[num_of_sets];
     for (int i = 0; i < num_of_sets; i++){
-      set temp = new set(blocks_per_set, block_size, policy);
+      set* temp = new set(blocks_per_set, block_size, policy);
       *(data + i) = temp;
     }
 
@@ -211,7 +270,6 @@ public:
     load_misses = 0;
     store_misses = 0;
     store_hits = 0;
-    instruction_count = 0;
   }
 
   ~Cache(){
@@ -223,14 +281,14 @@ public:
 
   // should be invoked when servicing a load word command. Will update laod hit\miss stats as well as update the cache if it is a miss returns a single char that is the answer to the load request.
   char loadWord(int address, Memory mem){
-    int bits_index_and_offset = log(block_size) + log(associativity);
-    int index = address % (pow(2, bits_index_and_offset));
+    int bits_index_and_offset = log(block_size) + log(num_of_sets);
+    int index = address % (int)(pow(2, bits_index_and_offset));
     index = index / block_size;
     int offset = address % block_size;
     int tag = address / (pow(2, bits_index_and_offset));
 
 
-    set current = *(data + index);
+    set* current = *(data + index);
     cacheEntry* entry = current->findEntryTag(tag);
     if(entry != NULL){
       load_hits++;
@@ -239,7 +297,7 @@ public:
     }
     else{
       load_misses++;
-      char* new_block = mem->getBlock(address);
+      char* new_block = mem.getBlock(address);
       current->updateBlock(new_block);
       current->updateLRU(tag);
       char result = *(new_block + offset);
@@ -248,46 +306,50 @@ public:
     }
   }
 
-};
 
-
-class Memory{
-private:
-  int memorySize;
-  int block_size;
-  char* data;
-
-  char randomChar(){
-    return 'a';
-  }
-
-public:
-  Memory(int size, int start_val, int block_size){
-    memorySize = size;
-    int block_size;
-    data = new char[memorySize];
-    for(int i = 0; i < memorySize; i++){
-      if(start_val == 0){
-        *(data + i) = 0xff;
-      }
-      else{
-        *(data + i) = randomChar();
-      }
-    }
-  }
-
-  char* getBlock(int address){
-    char* new_block = new char[block_size];
+  // should be invoked when servicing a store word command
+  void storeWord(int address, Memory mem, char word){
+    int bits_index_and_offset = log(block_size) + log(num_of_sets);
+    int index = address % (int)(pow(2, bits_index_and_offset));
+    index = index / block_size;
     int offset = address % block_size;
-    for(int i = 0; i < block_size; i++){
-      *(new_block + i) = *(data + address - offset + i);
+    int tag = address / (pow(2, bits_index_and_offset));
+
+    set* current = *(data + index);
+    cacheEntry* entry = current->findEntryTag(tag);
+    if(entry != NULL){
+      store_hits++;
+      entry->updateEntryData(offset, word);
+      return;
     }
-    return new_block;
+    else{
+      store_misses++;
+      mem.replaceWord(address, word);
+      char* new_block = mem.getBlock(address);
+      current->updateBlock(new_block);
+      current->updateLRU(tag);
+      delete new_block;
+      return;
+    }
+
   }
 
-  void replaceWord(int address, char new_word){
-    *(data + address) = new_word;
+  int getLoadHits(){
+    return load_hits;
   }
+
+  int getLoadMisses(){
+    return load_misses;
+  }
+
+  int getStoreHits(){
+    return store_hits;
+  }
+
+  int getStoreMisses(){
+    return store_hits;
+  }
+
+
 };
-
 
