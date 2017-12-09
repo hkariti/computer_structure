@@ -58,7 +58,7 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
   std::istringstream lineStream(std::ios::in);
   std::string command;
   int address, index = 0;
-  char value;
+  int value;
   int loadHits = 0, storeHits = 0;
   int prevLoadHits = 0, prevStoreHits = 0;
   lineStream.setf(std::ios_base::hex | std::ios_base::internal |
@@ -72,6 +72,7 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
     lineStream.seekg(0);
     lineStream >> command >> address;
 
+    log << index << " " << line << std::endl;
     if (command == "load") {
       value = cache.loadWord(address, mem);
       loadHits = cache.getLoadHits();
@@ -80,7 +81,7 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
         log << "miss ";
       else
         log << "hit ";
-      log << value << std::endl;
+      log << std::hex << std::uppercase << value << std::endl;
     } else {
       lineStream >> value;
       cache.storeWord(address, mem, value);

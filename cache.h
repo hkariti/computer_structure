@@ -306,7 +306,7 @@ public:
   }
 
   // should be invoked when servicing a load word command. Will update laod hit\miss stats as well as update the cache if it is a miss returns a single char that is the answer to the load request.
-  char loadWord(int address, Memory& mem){
+  unsigned char loadWord(int address, Memory& mem){
     int bits_index_and_offset = log(block_size) + log(num_of_sets);
     int index = address % (int)(pow(2, bits_index_and_offset));
     index = index / block_size;
