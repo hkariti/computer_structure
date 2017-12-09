@@ -1,7 +1,8 @@
 #include <iostream>
 #include <fstream>
-#include <unistd.h>
 #include <sstream>
+#include <string.h>
+#include <unistd.h>
 #include "cache.h"
 
 bool parse_args(int &mem_size, int &cache_size, int &block_size,
