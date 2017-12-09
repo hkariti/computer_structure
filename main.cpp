@@ -103,8 +103,8 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
   int storeMisses = cache.getStoreMisses();
   float loadMissRate = (float)loadMisses/(loadHits + loadMisses);
   float storeMissRate = (float)storeMisses/(storeHits + storeMisses);
-  float totalMissRate = (loadMisses + storeMisses)/(loadMisses + loadHits +
-                                                    storeMisses + storeHits);
+  float totalMissRate = (float)(loadMisses + storeMisses)/
+    (loadMisses + loadHits + storeMisses + storeHits);
   stats << "Instruction Count: " << index << std::endl;
   stats << "Load Hits: " << loadHits << std::endl;
   stats << "Load Misses: " << loadMisses << std::endl;
