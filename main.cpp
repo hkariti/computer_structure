@@ -63,6 +63,8 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
   int prevLoadHits = 0, prevStoreHits = 0;
   lineStream.setf(std::ios_base::hex | std::ios_base::internal |
                   std::ios_base::right, std::ios_base::basefield);
+  stats.setf(std::ios_base::fixed, std::ios_base::floatfield);
+  stats.precision(2);
   std::getline(instructions, line);
   while (not instructions.eof()) {
     value = 0;
@@ -73,22 +75,22 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
     if (command == "load") {
       value = cache.loadWord(address, mem);
       loadHits = cache.getLoadHits();
-      std::cout << index << " load ";
+      log << index << " load ";
       if (loadHits == prevLoadHits)
-        std::cout << "miss ";
+        log << "miss ";
       else
-        std::cout << "hit ";
-      std::cout << value << std::endl;
+        log << "hit ";
+      log << value << std::endl;
     } else {
       lineStream >> value;
       cache.storeWord(address, mem, value);
       storeHits = cache.getStoreHits();
-      std::cout << index << " store ";
+      log << index << " store ";
       if (storeHits == prevStoreHits)
-        std::cout << "miss";
+        log << "miss";
       else
-        std::cout << "hit";
-      std::cout << std::endl;
+        log << "hit";
+      log << std::endl;
     }
     prevLoadHits = loadHits;
     prevStoreHits = storeHits;
@@ -100,14 +102,17 @@ void run_program(std::ifstream& instructions, std::ofstream& stats,
   int storeMisses = cache.getStoreMisses();
   float loadMissRate = (float)loadMisses/(loadHits + loadMisses);
   float storeMissRate = (float)storeMisses/(storeHits + storeMisses);
-  std::cout << "SUMMARY:" <<std::endl;
-  std::cout << "Instruction Count: " << index << std::endl;
-  std::cout << "Load Hits: " << loadHits << std::endl;
-  std::cout << "Load Misses: " << loadMisses << std::endl;
-  std::cout << "Store Hits: " << storeHits << std::endl;
-  std::cout << "Store Misses: " << storeMisses << std::endl;
-  std::cout << "Load Miss Rate: " << loadMissRate << std::endl;
-  std::cout << "Store Miss Rate: " << storeMissRate << std::endl;
+  float totalMissRate = (loadMisses + storeMisses)/(loadMisses + loadHits +
+                                                    storeMisses + storeHits);
+  stats << "Instruction Count: " << index << std::endl;
+  stats << "Load Hits: " << loadHits << std::endl;
+  stats << "Load Misses: " << loadMisses << std::endl;
+  stats << "Store Hits: " << storeHits << std::endl;
+  stats << "Store Misses: " << storeMisses << std::endl;
+  stats << "Load Miss Rate: " << loadMissRate*100 << "%" << std::endl;
+  stats << "Store Miss Rate: " << storeMissRate*100 << "%" << std::endl;
+  stats << "Total Miss Rate: " << totalMissRate*100 << "%" << std::endl;
+
 }
 
 int main(int argc, char** argv) {
