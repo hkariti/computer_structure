@@ -213,13 +213,16 @@ public:
     }
   }
 
-  // finds the block that should be evicted inside the set, the one that is least recently used = LRUstanding == blocks_per_set - 1
+  // finds the block that should be evicted inside the set, the one that is least recently used = LRUstanding is maximum
   int findEvicLRU(){
+    int LRUBlock = 0, maxLRU = 0;
     for(int i = 0; i < blocks_per_set; i++){
-      if((*(data + i))->getLRU() == (blocks_per_set-1)){
-        return i;
+      if(data[i]->getLRU() > maxLRU){
+        maxLRU = data[i]->getLRU();
+        LRUBlock = i;
       }
     }
+    return LRUBlock;
   }
 
   int findEvicRandom(){
