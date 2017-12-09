@@ -312,7 +312,7 @@ public:
     index = index / block_size;
     int offset = address % block_size;
     int tag = address / index_and_offset;
-
+    tag = tag % mem.memorySize;
 
     set* current = *(data + index);
     cacheEntry* entry = current->findEntryTag(tag);
@@ -340,6 +340,7 @@ public:
     index = index / block_size;
     int offset = address % block_size;
     int tag = address / index_and_offset;
+    tag = tag % mem.memorySize;
 
     set* current = *(data + index);
     cacheEntry* entry = current->findEntryTag(tag);
