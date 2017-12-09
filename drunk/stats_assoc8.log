@@ -1,0 +1,8 @@
+Instruction Count: 9999
+Load Hits: 9863
+Load Misses: 136
+Store Hits: 0
+Store Misses: 0
+Load Miss Rate: 1.36%
+Store Miss Rate: nan%
+Total Miss Rate: 1.36%
