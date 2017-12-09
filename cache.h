@@ -374,7 +374,7 @@ public:
   }
 
   int getStoreMisses(){
-    return store_hits;
+    return store_misses;
   }
 
 
