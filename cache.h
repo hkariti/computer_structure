@@ -307,11 +307,11 @@ public:
 
   // should be invoked when servicing a load word command. Will update laod hit\miss stats as well as update the cache if it is a miss returns a single char that is the answer to the load request.
   unsigned char loadWord(int address, Memory& mem){
-    int bits_index_and_offset = log(block_size) + log(num_of_sets);
-    int index = address % (int)(pow(2, bits_index_and_offset));
+    int index_and_offset = block_size * num_of_sets;
+    int index = address % index_and_offset;
     index = index / block_size;
     int offset = address % block_size;
-    int tag = address / (pow(2, bits_index_and_offset));
+    int tag = address / index_and_offset;
 
 
     set* current = *(data + index);
@@ -335,11 +335,11 @@ public:
 
   // should be invoked when servicing a store word command
   void storeWord(int address, Memory& mem, char word){
-    int bits_index_and_offset = log(block_size) + log(num_of_sets);
-    int index = address % (int)(pow(2, bits_index_and_offset));
+    int index_and_offset = block_size * num_of_sets;
+    int index = address % index_and_offset;
     index = index / block_size;
     int offset = address % block_size;
-    int tag = address / (pow(2, bits_index_and_offset));
+    int tag = address / index_and_offset;
 
     set* current = *(data + index);
     cacheEntry* entry = current->findEntryTag(tag);
