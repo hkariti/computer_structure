@@ -1,2 +1,2 @@
 all : 
-	g++ main.cpp -I. -o cachesim
+	g++ --std=c++11 main.cpp -I. -o cachesim
