@@ -12,34 +12,22 @@ main:
         ld       r13, rounds(r0)    ; Load vector size
         ld       r3,  a(r0)         ; load a
         
-        ; SW Pipeline Preample (4 stages)
-        ld      r2, x(r10)    	; r2 <= X[r10] (stage1, itr 1)
-        ld      r6, y(r10) 		; r6 <= Y[r10] (stage3, itr 1)
-        dmul   	r4, r2, r3      ; r4 <= r2 * a (stage2, itr 1)
-        ld      r2, x+8(r10)   	; r2 <= X[r10] (stage1, itr 2)
-        daddi   r13, r13, -3    ; decrease 3 iterations so we clear the pipeline
-        dadd    r6, r4, r6      ; r6 <= r4 + r6 (stage3, itr 1)
-        dmul   	r4, r2, r3      ; r4 <= r2 * a (stage2, itr 2)
-        ld      r2, x+16(r10)  	; r2 <= X[r10] (stage1, itr 3)
-        ;*** Start the loop
-loop:  
-        sd      r6, y(r10)  	; Y[r10] <= r6 (stage4, itr i)
-        ld      r6, y+8(r10) 	; r6 <= Y[r10] (stage3, itr i+1)
-        daddi   r13, r13, -1      	
-        daddi   r10, r10, 8     
-        dadd    r6, r4, r6      ; r6 <= r4 + r6 (stage3, itr i+1)
-        dmul   	r4, r2, r3      ; r4 <= r2 * a (stage2, itr i+2)
+        ;*** Start the loop        
+loop:   ld      r2, x(r10)    	; r2 <= X[r10]
+        ld      r6, y(r10) 		; r6 <= Y[r10]
+        dmul   	r4, r2, r3      ; r4 <= r2 * a
+        ld      r1, x+8(r10)  	; r1 <= X[r10+8]
+        ld      r5, y+8(r10)	; r5 <= Y[r10+8]
+        daddi   r13, r13, -2
+        dmul   	r7, r1, r3      ; r7 <= r1 * a
+        dadd    r6, r4, r6      ; r6 <= r4 + r6
+        sd      r6, y(r10)  	; Y[r10] <= r6
+
+        daddi   r10, r10, 16
+        dadd    r5, r7, r5      ; r5 <= r7 + r5
         bnez    r13, loop
-        ld      r2, x+16(r10)    	; r2 <= X[r10] (stage1, itr i+3)
-		; SW Pipeline emptying
-        sd      r6, y(r10)  	; Y[r10] <= r6 (stage4, itr n-2)
-        ld      r6, y+8(r10) 	; r6 <= Y[r10] (stage3, itr n-1)
-        dadd    r6, r4, r6      ; r6 <= r4 + r6 (stage3, itr n-1)
-        dmul   	r4, r2, r3      ; r4 <= r2 * a (stage2, itr n)
-        sd      r6, y+8(r10)  	; Y[r10] <= r6 (stage4, itr n-1)
-        ld      r6, y+16(r10) 	; r6 <= Y[r10] (stage3, itr n)
-        dadd    r6, r4, r6      ; r6 <= r4 + r6 (stage3, itr n)
-        sd      r6, y+16(r10)  	; Y[r10] <= r6 (stage4, itr n)
+        sd      r5, y-8(r10)  	; Y[r10+8] <= r5
+        nop
         halt
 	
 	;**************  Data Area ***************
